@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Midnight Royal · Todo</title>
+<style>
+  :root {
+    --canvas: #0a0e17;
+    --card: #131a26;
+    --text: #f8fafc;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --success: #10b981;
+    --line: rgba(255, 255, 255, 0.07);
+    --field: #0e141f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding-bottom: 60px;
+  }
+
+  .shell { width: 100%; max-width: 480px; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 26px 22px 8px;
+  }
+  .topbar h1 { font-size: 1.05rem; font-weight: 700; }
+  .icon-btn {
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 1.05rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease;
+  }
+  .icon-btn:hover { background: rgba(255, 255, 255, 0.06); }
+
+  /* ---------- Welcome header (curved hero panel) ---------- */
+  .hero {
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    border-radius: 0 0 34px 34px;
+    padding: 18px 22px 26px;
+  }
+  .welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .welcome h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+    margin-bottom: 6px;
+  }
+  .welcome p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  /* Board chips — stands in for the date strip */
+  .chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 1 0 auto;
+    min-width: 96px;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  }
+  .chip:hover { transform: scale(1.04); border-color: rgba(37, 99, 235, 0.5); }
+  .chip .ico { display: block; font-size: 1.1rem; margin-bottom: 3px; }
+  .chip .nm { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+  .chip.on { background: var(--accent); border-color: var(--accent); }
+  .chip.on .nm { color: #e4edff; }
+
+  .badge {
+    flex-shrink: 0;
+    background: rgba(37, 99, 235, 0.14);
+    border: 1px solid rgba(37, 99, 235, 0.45);
+    color: #93b4fd;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 8px 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ---------- Control board ---------- */
+  .control {
+    margin: 20px 18px 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .control-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 13px;
+  }
+  .control-row { display: flex; flex-direction: column; gap: 10px; }
+
+  input[type="text"], select {
+    width: 100%;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 0.92rem;
+    font-family: inherit;
+    padding: 13px 15px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  input[type="text"]::placeholder { color: #47536b; }
+  input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  }
+  select { appearance: none; cursor: pointer; }
+  .select-wrap { position: relative; flex: 1; }
+  .select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 16px; top: 50%;
+    width: 7px; height: 7px;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+  .bottom-row { display: flex; gap: 10px; }
+
+  .add-btn {
+    flex-shrink: 0;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0 22px;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  .add-btn:hover { background: #1d4ed8; transform: scale(1.04); }
+  .add-btn:active { transform: scale(0.97); }
+
+  /* ---------- Task cards ---------- */
+  .cards-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 26px 22px 14px;
+  }
+  .cards-head h2 { font-size: 0.95rem; font-weight: 600; }
+  .cards-head span { font-size: 0.74rem; color: var(--muted); }
+
+  #list { padding: 0 18px; }
+
+  .task {
+    border-radius: 16px;
+    padding-bottom: 18px;
+  }
+  .task + .task { border-top: 1px dashed var(--line); padding-top: 18px; }
+
+  /* Status tab + progress strip above each card */
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 6px 8px;
+  }
+  .status {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(37, 99, 235, 0.12);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .task.done .status { color: var(--success); background: rgba(16, 185, 129, 0.14); }
+
+  .bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--success);
+    transition: width 0.3s ease;
+  }
+  .task.done .bar i { width: 100%; }
+  .pct { min-width: 34px; text-align: right; font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+  .task.done .pct { color: var(--success); }
+
+  .inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 16px;
+    padding: 16px;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .inner:hover { transform: scale(1.02); border-color: rgba(37, 99, 235, 0.5); }
+  .task.done .inner {
+    background: rgba(16, 185, 129, 0.07);
+    border-left-color: var(--success);
+  }
+  .task.done .inner:hover { border-color: rgba(16, 185, 129, 0.45); }
+
+  /* Diamond tile checkbox, echoing the reference card icon */
+  .check {
+    flex-shrink: 0;
+    width: 38px; height: 38px;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    background: var(--field);
+    display: grid;
+    place-items: center;
+    transform: rotate(45deg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .check:hover { border-color: var(--accent); }
+  .check span { transform: rotate(-45deg); font-size: 0.85rem; line-height: 1; color: transparent; }
+  .task.done .check { background: var(--success); border-color: var(--success); }
+  .task.done .check span { color: #06281d; }
+
+  .body { flex: 1; min-width: 0; margin-left: 4px; }
+  .txt {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+    margin-bottom: 3px;
+    transition: color 0.2s ease;
+  }
+  .task.done .txt {
+    color: var(--success);
+    text-decoration: line-through;
+    text-decoration-color: rgba(16, 185, 129, 0.5);
+  }
+  .cat { font-size: 0.78rem; color: var(--muted); }
+
+  .del {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .del:hover {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.5);
+    transform: scale(1.12);
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border: 1px dashed var(--line);
+    border-radius: 16px;
+    padding: 36px 20px;
+  }
+</style>
+</head>
+<body>
+  <main class="shell">
+
+    <div class="topbar">
+      <button class="icon-btn" type="button" aria-label="Back">&#8592;</button>
+      <h1>My Tasks</h1>
+      <button class="icon-btn" type="button" aria-label="More options">&#8942;</button>
+    </div>
+
+    <section class="hero">
+      <div class="welcome">
+        <div>
+          <h2>Good day, Devia</h2>
+          <p>Your boards are synced and ready. Let's clear the deck.</p>
+        </div>
+        <div class="badge" id="badge">0 active</div>
+      </div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="control">
+      <div class="control-label">Control Board</div>
+      <div class="control-row">
+        <input type="text" id="taskInput" placeholder="What needs to get done?" maxlength="140">
+        <div class="bottom-row">
+          <div class="select-wrap">
+            <select id="boardSelect">
+              <option value="work">💼 Work Board</option>
+              <option value="personal">🌿 Personal Board</option>
+              <option value="urgent">🔥 Urgent Board</option>
+            </select>
+          </div>
+          <button class="add-btn" id="addBtn">Add</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="cards-head">
+      <h2>Active Cards</h2>
+      <span id="doneCount">0 completed</span>
+    </div>
+    <section id="list"></section>
+
+  </main>
+
+<script>
+  const BOARDS = {
+    work:     { emoji: "💼", name: "Work Board" },
+    personal: { emoji: "🌿", name: "Personal Board" },
+    urgent:   { emoji: "🔥", name: "Urgent Board" }
+  };
+
+  const KEY = "midnight-royal-tasks";
+  const listEl = document.getElementById("list");
+  const inputEl = document.getElementById("taskInput");
+  const selectEl = document.getElementById("boardSelect");
+  const badgeEl = document.getElementById("badge");
+  const doneEl = document.getElementById("doneCount");
+  const chipsEl = document.getElementById("chips");
+
+  let tasks = load();
+
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY));
+      if (!Array.isArray(raw)) return [];
+      return raw.filter(t => t && typeof t.text === "string")
+                .map(t => ({
+                  id: String(t.id ?? Date.now() + Math.random()),
+                  text: t.text,
+                  board: BOARDS[t.board] ? t.board : "work",
+                  done: Boolean(t.done)
+                }));
+    } catch {
+      return [];
+    }
+  }
+
+  function save() {
+    localStorage.setItem(KEY, JSON.stringify(tasks));
+  }
+
+  function renderChips() {
+    chipsEl.textContent = "";
+    Object.entries(BOARDS).forEach(([key, board]) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip" + (selectEl.value === key ? " on" : "");
+
+      const ico = document.createElement("span");
+      ico.className = "ico";
+      ico.textContent = board.emoji;
+
+      const nm = document.createElement("span");
+      nm.className = "nm";
+      nm.textContent = board.name.replace(" Board", "");
+
+      chip.append(ico, nm);
+      chip.addEventListener("click", () => {
+        selectEl.value = key;
+        renderChips();
+        inputEl.focus();
+      });
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function render() {
+    listEl.textContent = "";
+
+    if (tasks.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No cards yet — add your first task above.";
+      listEl.appendChild(empty);
+    }
+
+    tasks.forEach(task => {
+      const board = BOARDS[task.board];
+
+      const card = document.createElement("div");
+      card.className = "task" + (task.done ? " done" : "");
+
+      const strip = document.createElement("div");
+      strip.className = "strip";
+
+      const status = document.createElement("span");
+      status.className = "status";
+      status.textContent = task.done ? "Completed" : "Running";
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.appendChild(document.createElement("i"));
+
+      const pct = document.createElement("span");
+      pct.className = "pct";
+      pct.textContent = task.done ? "100%" : "00%";
+
+      strip.append(status, bar, pct);
+
+      const inner = document.createElement("div");
+      inner.className = "inner";
+
+      const check = document.createElement("div");
+      check.className = "check";
+      check.setAttribute("role", "checkbox");
+      check.setAttribute("tabindex", "0");
+      check.setAttribute("aria-checked", String(task.done));
+      const tick = document.createElement("span");
+      tick.textContent = "✔";
+      check.appendChild(tick);
+      check.addEventListener("click", () => toggle(task.id));
+      check.addEventListener("keydown", e => {
+        if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(task.id); }
+      });
+
+      const body = document.createElement("div");
+      body.className = "body";
+
+      const txt = document.createElement("div");
+      txt.className = "txt";
+      txt.textContent = task.text;
+
+      const cat = document.createElement("div");
+      cat.className = "cat";
+      cat.textContent = board.emoji + " " + board.name;
+
+      body.append(txt, cat);
+
+      const del = document.createElement("button");
+      del.className = "del";
+      del.type = "button";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", "Delete task");
+      del.addEventListener("click", () => remove(task.id));
+
+      inner.append(check, body, del);
+      card.append(strip, inner);
+      listEl.appendChild(card);
+    });
+
+    const active = tasks.filter(t => !t.done).length;
+    badgeEl.textContent = active + (active === 1 ? " active task" : " active tasks");
+    doneEl.textContent = tasks.filter(t => t.done).length + " completed";
+  }
+
+  function add() {
+    const text = inputEl.value.trim();
+    if (!text) {
+      inputEl.focus();
+      return;
+    }
+    tasks.unshift({
+      id: String(Date.now()) + Math.random().toString(16).slice(2),
+      text,
+      board: selectEl.value,
+      done: false
+    });
+    inputEl.value = "";
+    inputEl.focus();
+    save();
+    render();
+  }
+
+  function toggle(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    task.done = !task.done;
+    save();
+    render();
+  }
+
+  function remove(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    save();
+    render();
+  }
+
+  document.getElementById("addBtn").addEventListener("click", add);
+  inputEl.addEventListener("keydown", e => {
+    if (e.key === "Enter") add();
+  });
+  selectEl.addEventListener("change", renderChips);
+
+  renderChips();
+  render();
+</script>
+</body>
+</html>
